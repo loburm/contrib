@@ -52,6 +52,8 @@ var (
 		"Name of the pod in which monitored component is running.")
 	namespaceId = flag.String("namespace-id", "",
 		"Namespace name of the pod in which monitored component is running.")
+	squashComponentName = flag.Bool("squash-component-name", true,
+		"If metric name starts with the component name then this substring is removed to keep metric name shorter.")
 )
 
 func main() {
@@ -130,6 +132,9 @@ func readAndPushDataToStackdriver(stackdriverService *v3.Service, gceConf *confi
 		if err != nil {
 			glog.Warningf("Error while getting Prometheus metrics %v", err)
 			continue
+		}
+		if *squashComponentName {
+			metrics = translator.SquashComponentName(metrics, sourceConfig.Component)
 		}
 		metricDescriptorCache.UpdateMetricDescriptors(metrics, sourceConfig.Whitelisted)
 		ts := translator.TranslatePrometheusToStackdriver(commonConfig, sourceConfig.Whitelisted, metrics, metricDescriptorCache)

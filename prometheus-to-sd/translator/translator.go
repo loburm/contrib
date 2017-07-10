@@ -26,6 +26,7 @@ import (
 	v3 "google.golang.org/api/monitoring/v3"
 
 	"k8s.io/contrib/prometheus-to-sd/config"
+	"strings"
 )
 
 const (
@@ -37,6 +38,22 @@ var supportedMetricTypes = map[dto.MetricType]bool{
 	dto.MetricType_COUNTER:   true,
 	dto.MetricType_GAUGE:     true,
 	dto.MetricType_HISTOGRAM: true,
+}
+
+// SquashComponentName removes prefixes from metric name if they are equal to the component name. For example:
+// etcd_version_info -> version_info if component name is equal to etcd.
+func SquashComponentName(metricFamilies map[string]*dto.MetricFamily, componentName string) map[string]*dto.MetricFamily {
+	result := make(map[string]*dto.MetricFamily)
+	for metricName, metricFamily := range metricFamilies {
+		if strings.HasPrefix(metricName, fmt.Sprintf("%s_", componentName)) {
+			newMetricName := strings.TrimPrefix(metricName, fmt.Sprintf("%s_", componentName))
+			metricFamily.Name = &newMetricName
+			result[newMetricName] = metricFamily
+		} else {
+			result[metricName] = metricFamily
+		}
+	}
+	return result
 }
 
 // TranslatePrometheusToStackdriver translates metrics in Prometheus format to Stackdriver format.
